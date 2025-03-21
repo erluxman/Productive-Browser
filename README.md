@@ -13,6 +13,8 @@ Just sharing it coz I found it useful that I didn't keep finding myself opening 
 
 `ctrl+tab` or `ctrl+shift+tab`
 
+![reset](/assets/img0.png)
+
 ## Screenshots
 
 ![gemeni](/assets/img1.png)

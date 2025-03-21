@@ -9,7 +9,7 @@ Just sharing it coz I found it useful that I didn't keep finding myself opening 
 `npm run build`
 `npx electron .`
 
-**Btw, You can switch by the shortcut**
+**Btw, You can switch between tabs using shortcuts**
 
 `ctrl+tab` or `ctrl+shift+tab`
 

@@ -195,6 +195,11 @@ async function refreshUrlLists() {
     preferencesUrlList.appendChild(createUrlListItem(url));
   });
 
+  // Load the first URL if available and no URL is currently loaded
+  if (urls.length > 0 && !document.querySelector(".url-item.active")) {
+    loadUrlInWebview(urls[0].url);
+  }
+
   // Reinitialize drag and drop
   initializeDragAndDrop();
 }

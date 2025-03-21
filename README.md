@@ -1,0 +1,22 @@
+# Its not a browser in by any means, its just a webview manger
+
+But I want to use it as if its my primary browser. 😁
+
+Just sharing it coz I found it useful that I didn't keep finding myself opening [Youtube](https://youtube.com) or [Twitter](https://twitter.com) unconsciously
+
+## To build an app by Yourself
+
+`npm run build`
+`npx electron .`
+
+**Btw, You can switch by the shortcut**
+
+`ctrl+tab` or `ctrl+shift+tab`
+
+## Screenshots
+
+![gemeni](/assets/img1.png)
+
+![grok](/assets/img3.png)
+
+![setting](/assets/img2.png)

@@ -181,80 +181,40 @@ function createUrlListItem(urlData) {
   return li;
 }
 
-// Function to refresh URL lists
-async function refreshUrlLists() {
+// Function to update URL order
+async function updateUrlOrder() {
   const urlList = document.getElementById("url-list");
-  const preferencesUrlList = document.getElementById("preferences-url-list");
+  const items = Array.from(urlList.getElementsByClassName("url-item"));
+  const newUrls = items.map((item) => ({ url: item.dataset.url }));
 
-  urlList.innerHTML = "";
+  // Store current active URL
+  const activeItem = document.querySelector(".url-item.active");
+  const activeUrl = activeItem ? activeItem.dataset.url : null;
+
+  // Update the store
+  await ipcRenderer.invoke("update-urls", newUrls);
+
+  // Refresh both lists
+  const preferencesUrlList = document.getElementById("preferences-url-list");
   preferencesUrlList.innerHTML = "";
 
-  const urls = await ipcRenderer.invoke("get-urls");
-  urls.forEach((url) => {
-    urlList.appendChild(createUrlItem(url));
+  // Rebuild preferences list in the same order
+  newUrls.forEach((url) => {
     preferencesUrlList.appendChild(createUrlListItem(url));
   });
 
-  // Load the first URL if available and no URL is currently loaded
-  if (urls.length > 0 && !document.querySelector(".url-item.active")) {
-    loadUrlInWebview(urls[0].url);
+  // Restore active state
+  if (activeUrl) {
+    const newActiveItem = Array.from(
+      urlList.getElementsByClassName("url-item")
+    ).find((item) => item.dataset.url === activeUrl);
+    if (newActiveItem) {
+      newActiveItem.classList.add("active");
+    }
   }
 
   // Reinitialize drag and drop
   initializeDragAndDrop();
-}
-
-// Function to initialize drag and drop
-function initializeDragAndDrop() {
-  const urlList = document.getElementById("preferences-url-list");
-  const items = urlList.getElementsByClassName("url-list-item");
-
-  Array.from(items).forEach((item) => {
-    item.addEventListener("dragstart", handleDragStart);
-    item.addEventListener("dragend", handleDragEnd);
-    item.addEventListener("dragover", handleDragOver);
-    item.addEventListener("drop", handleDrop);
-  });
-}
-
-// Drag and drop handlers
-let draggedItem = null;
-
-function handleDragStart(e) {
-  draggedItem = this;
-  this.style.opacity = "0.4";
-}
-
-function handleDragEnd(e) {
-  this.style.opacity = "1";
-  draggedItem = null;
-}
-
-function handleDragOver(e) {
-  e.preventDefault();
-  if (this === draggedItem) return;
-
-  const rect = this.getBoundingClientRect();
-  const midY = rect.top + rect.height / 2;
-
-  if (e.clientY < midY) {
-    this.parentNode.insertBefore(draggedItem, this);
-  } else {
-    this.parentNode.insertBefore(draggedItem, this.nextSibling);
-  }
-}
-
-function handleDrop(e) {
-  e.preventDefault();
-  if (this === draggedItem) return;
-
-  const urlList = document.getElementById("preferences-url-list");
-  const items = Array.from(urlList.getElementsByClassName("url-list-item"));
-  const newUrls = items.map((item) => ({ url: item.dataset.url }));
-
-  ipcRenderer.invoke("update-urls", newUrls).then(() => {
-    refreshUrlLists();
-  });
 }
 
 // Sidebar drag and drop handlers
@@ -268,6 +228,7 @@ function handleSidebarDragStart(e) {
 function handleSidebarDragEnd(e) {
   this.style.opacity = "1";
   sidebarDraggedItem = null;
+  updateUrlOrder();
 }
 
 function handleSidebarDragOver(e) {
@@ -286,14 +247,108 @@ function handleSidebarDragOver(e) {
 
 function handleSidebarDrop(e) {
   e.preventDefault();
-  if (this === sidebarDraggedItem) return;
+}
 
+// Preferences drag and drop handlers
+let draggedItem = null;
+
+function handleDragStart(e) {
+  draggedItem = this;
+  this.style.opacity = "0.4";
+}
+
+function handleDragEnd(e) {
+  this.style.opacity = "1";
+  draggedItem = null;
+
+  // Update sidebar order to match preferences
   const urlList = document.getElementById("url-list");
-  const items = Array.from(urlList.getElementsByClassName("url-item"));
-  const newUrls = items.map((item) => ({ url: item.dataset.url }));
+  const preferencesItems = Array.from(
+    document
+      .getElementById("preferences-url-list")
+      .getElementsByClassName("url-list-item")
+  );
+  const newUrls = preferencesItems.map((item) => ({ url: item.dataset.url }));
 
-  ipcRenderer.invoke("update-urls", newUrls).then(() => {
-    refreshUrlLists();
+  // Store current active URL
+  const activeItem = document.querySelector(".url-item.active");
+  const activeUrl = activeItem ? activeItem.dataset.url : null;
+
+  // Clear and rebuild sidebar
+  urlList.innerHTML = "";
+  newUrls.forEach((url) => {
+    const item = createUrlItem(url);
+    if (url.url === activeUrl) {
+      item.classList.add("active");
+    }
+    urlList.appendChild(item);
+  });
+
+  // Update the store
+  ipcRenderer.invoke("update-urls", newUrls);
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  if (this === draggedItem) return;
+
+  const rect = this.getBoundingClientRect();
+  const midY = rect.top + rect.height / 2;
+
+  if (e.clientY < midY) {
+    this.parentNode.insertBefore(draggedItem, this);
+  } else {
+    this.parentNode.insertBefore(draggedItem, this.nextSibling);
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+}
+
+// Function to refresh URL lists
+async function refreshUrlLists() {
+  const urlList = document.getElementById("url-list");
+  const preferencesUrlList = document.getElementById("preferences-url-list");
+
+  // Store current active URL if any
+  const activeItem = document.querySelector(".url-item.active");
+  const activeUrl = activeItem ? activeItem.dataset.url : null;
+
+  urlList.innerHTML = "";
+  preferencesUrlList.innerHTML = "";
+
+  const urls = await ipcRenderer.invoke("get-urls");
+
+  // Update both lists with the new order
+  urls.forEach((url) => {
+    const sidebarItem = createUrlItem(url);
+    if (url.url === activeUrl) {
+      sidebarItem.classList.add("active");
+    }
+    urlList.appendChild(sidebarItem);
+    preferencesUrlList.appendChild(createUrlListItem(url));
+  });
+
+  // If no URL is active and we have URLs, load the first one
+  if (!activeUrl && urls.length > 0) {
+    loadUrlInWebview(urls[0].url);
+  }
+
+  // Reinitialize drag and drop
+  initializeDragAndDrop();
+}
+
+// Function to initialize drag and drop
+function initializeDragAndDrop() {
+  const urlList = document.getElementById("preferences-url-list");
+  const items = urlList.getElementsByClassName("url-list-item");
+
+  Array.from(items).forEach((item) => {
+    item.addEventListener("dragstart", handleDragStart);
+    item.addEventListener("dragend", handleDragEnd);
+    item.addEventListener("dragover", handleDragOver);
+    item.addEventListener("drop", handleDrop);
   });
 }
 
